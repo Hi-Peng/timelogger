@@ -44,6 +44,9 @@ struct imu_data{
     uint16_t y;
     uint16_t z;
 };
+
+struct imu_data raw_data;
+struct Vector norm_data;
 /**
  * @brief Read a sequence of bytes from a ADXL sensor registers
  */
@@ -97,19 +100,44 @@ static void adxl345_init(i2c_master_dev_handle_t dev_handle)
     ESP_LOGI(ACC_DATA_TAG, "Init ADXL345 Done");
 }
 
-static void adxl345_set_range(i2c_master_dev_handle_t dev_handle)
+static void adxl345_set_range(i2c_master_dev_handle_t dev_handle, adxl345_range_t range)
 {
-
+    uint8_t data[2];
+    ESP_ERROR_CHECK(adxl_register_read(dev_handle, ADXL345_REG_DATA_FORMAT, data, 1));
+    data[0] &= 0xF0;
+    data[0] |= range;
+    data[0] |= 0x08; 
 }
 
-static void adxl345_set_datarate(i2c_master_dev_handle_t dev_handle)
+static void adxl345_set_datarate(i2c_master_dev_handle_t dev_handle, adxl345_dataRate_t datarate)
 {
-
+    adxl_register_write_byte(dev_handle, ADXL345_REG_BW_RATE, datarate);
 }
 
 static void adxl345_clear_settings(i2c_master_dev_handle_t dev_handle)
 {
+    adxl345_set_range(dev_handle, ADXL345_RANGE_2G);
+    adxl345_set_datarate(dev_handle, ADXL345_DATARATE_100HZ);
 
+    adxl_register_write_byte(dev_handle, ADXL345_REG_THRESH_TAP, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_DUR, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_LATENT, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_WINDOW, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_THRESH_ACT, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_THRESH_INACT, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_TIME_INACT, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_THRESH_FF, 0x00);
+    adxl_register_write_byte(dev_handle, ADXL345_REG_TIME_FF, 0x00);
+
+    uint8_t data[2];
+
+    data[0] = adxl_register_read(dev_handle, ADXL345_REG_ACT_INACT_CTL, data, 1);
+    data[0] &= 0b10001000;
+    adxl_register_write_byte(dev_handle, ADXL345_REG_ACT_INACT_CTL, data[0]);
+
+    data[0] = adxl_register_read(dev_handle, ADXL345_REG_TAP_AXES, data, 1);
+    data[0] &= 0b11111000;
+    adxl_register_write_byte(dev_handle, ADXL345_REG_TAP_AXES, data[0]);
 }
 
 static struct imu_data adxl345_readraw(i2c_master_dev_handle_t dev_handle)
@@ -127,25 +155,37 @@ static struct imu_data adxl345_readraw(i2c_master_dev_handle_t dev_handle)
     return raw_data;
 }
 
+static struct Vector adxl345_readnorm(i2c_master_dev_handle_t dev_handle, float gravity_factor)
+{
+    
+    raw_data = adxl345_readraw(dev_handle);
+
+    norm_data.XAxis = raw_data.x * 0.004 * gravity_factor;
+    norm_data.YAxis = raw_data.y * 0.004 * gravity_factor;
+    norm_data.ZAxis = raw_data.z * 0.004 * gravity_factor;
+    return norm_data;
+}
 
 
 void app_main(void)
 {
-    struct imu_data imu_data;
-    uint8_t data[5];
     i2c_master_bus_handle_t bus_handle;
     i2c_master_dev_handle_t dev_handle;
     i2c_master_init(&bus_handle, &dev_handle);
     ESP_LOGI(TAG, "I2C initialized successfully");
 
     adxl345_init(dev_handle);
+    adxl345_clear_settings(dev_handle);
+    adxl345_set_range(dev_handle, ADXL345_RANGE_2G);
     ESP_LOGI(TAG, "ADXL345 Init Done");
 
     while(1)
     {
-        imu_data = adxl345_readraw(dev_handle);
-        ESP_LOGI(ACC_DATA_TAG, "X data: %X", imu_data.x);
-        vTaskDelay(100/portTICK_PERIOD_MS);
+        struct imu_data imu_data = adxl345_readraw(dev_handle);
+        ESP_LOGI(ACC_DATA_TAG, "RAW > X : %X\t\t | Y: %X\t\t | Z:%X\t\t ", imu_data.x, imu_data.y, imu_data.z);
+        struct Vector imu_cal_data = adxl345_readnorm(dev_handle, ADXL345_GRAVITY_EARTH);
+        ESP_LOGI(ACC_DATA_TAG, "Cal > X : %f\t | Y: %f\t | Z:%f\t ", imu_cal_data.XAxis, imu_cal_data.YAxis, imu_cal_data.ZAxis);
+        vTaskDelay(500/portTICK_PERIOD_MS);
     }
     
     ESP_ERROR_CHECK(i2c_master_bus_rm_device(dev_handle));

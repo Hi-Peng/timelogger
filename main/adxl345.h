@@ -1,3 +1,4 @@
+
 #define ADXL345_ADDRESS              (0x53)
 #define ADXL345_REG_DEVID            (0x00)
 #define ADXL345_REG_THRESH_TAP       (0x1D) // 1
@@ -38,8 +39,74 @@
 
 typedef enum
 {
+    ADXL345_DATARATE_3200HZ    = 0b1111,
+    ADXL345_DATARATE_1600HZ    = 0b1110,
+    ADXL345_DATARATE_800HZ     = 0b1101,
+    ADXL345_DATARATE_400HZ     = 0b1100,
+    ADXL345_DATARATE_200HZ     = 0b1011,
+    ADXL345_DATARATE_100HZ     = 0b1010,
+    ADXL345_DATARATE_50HZ      = 0b1001,
+    ADXL345_DATARATE_25HZ      = 0b1000,
+    ADXL345_DATARATE_12_5HZ    = 0b0111,
+    ADXL345_DATARATE_6_25HZ    = 0b0110,
+    ADXL345_DATARATE_3_13HZ    = 0b0101,
+    ADXL345_DATARATE_1_56HZ    = 0b0100,
+    ADXL345_DATARATE_0_78HZ    = 0b0011,
+    ADXL345_DATARATE_0_39HZ    = 0b0010,
+    ADXL345_DATARATE_0_20HZ    = 0b0001,
+    ADXL345_DATARATE_0_10HZ    = 0b0000
+} adxl345_dataRate_t;
+
+typedef enum
+{
+    ADXL345_INT2 = 0b01,
+    ADXL345_INT1 = 0b00
+} adxl345_int_t;
+
+typedef enum
+{
+    ADXL345_DATA_READY         = 0x07,
+    ADXL345_SINGLE_TAP         = 0x06,
+    ADXL345_DOUBLE_TAP         = 0x05,
+    ADXL345_ACTIVITY           = 0x04,
+    ADXL345_INACTIVITY         = 0x03,
+    ADXL345_FREE_FALL          = 0x02,
+    ADXL345_WATERMARK          = 0x01,
+    ADXL345_OVERRUN            = 0x00
+} adxl345_activity_t;
+
+typedef enum
+{
     ADXL345_RANGE_16G          = 0b11,
     ADXL345_RANGE_8G           = 0b10,
     ADXL345_RANGE_4G           = 0b01,
     ADXL345_RANGE_2G           = 0b00
 } adxl345_range_t;
+
+#ifndef VECTOR_STRUCT_H
+#define VECTOR_STRUCT_H
+struct Vector
+{
+    float XAxis;
+    float YAxis;
+    float ZAxis;
+};
+#endif
+
+struct Activites
+{
+    bool isOverrun;
+    bool isWatermark;
+    bool isFreeFall;
+    bool isInactivity;
+    bool isActivity;
+    bool isActivityOnX;
+    bool isActivityOnY;
+    bool isActivityOnZ;
+    bool isDoubleTap;
+    bool isTap;
+    bool isTapOnX;
+    bool isTapOnY;
+    bool isTapOnZ;
+    bool isDataReady;
+};
