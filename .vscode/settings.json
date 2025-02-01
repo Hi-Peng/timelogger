@@ -5,5 +5,12 @@
         "board/esp32c3-builtin.cfg"
     ],
     "idf.portWin": "COM5",
-    "idf.toolsPathWin": "d:\\App\\Espressif"
+    "idf.toolsPathWin": "d:\\App\\Espressif",
+    "files.associations": {
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "span": "c"
+    },
+    "idf.flashType": "UART"
 }
